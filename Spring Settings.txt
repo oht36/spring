@@ -1,0 +1,145 @@
+
+Spring New Project Settings
+
+[pom.xml]
+- modify spring(507) and Java(1.8) versions.
+
+- add libraries about spring(spring-tx, spring-jdbc, spring-test)
+
+- add libraries about MyBatis(HikariCP, MyBatis, mybatis-spring, Log4jdbc)
+
+- modify jUnit version(to 4.12)
+
+- add Lombok
+
+- modify servlet-api version to 3.1.0 (artifactId : javax.servlet-api)
+
+- modify Java version in maven-compiler-plugin to 1.8
+
+- Update project!
+
+- add ojdbc8.jar to Build Path, Deplyment Assembly
+
+[root-context.xml]
+- check mybatis-spring box in Namespaces
+
+- setting
+
+	<bean id="hikariConfig" class="com.zaxxer.hikari.HikariConfig">
+
+		<property name="driverClassName" value="net.sf.log4jdbc.sql.jdbcapi.DriverSpy"></property>
+		<property name="jdbcUrl" value="jdbc:log4jdbc:oracle:thin:@localhost:1521:orcl"></property>
+		
+		
+		<property name="username" value = "book_ex"></property>
+		<property name="password" value="book_ex"></property>
+	</bean>
+	
+
+	<!-- HikariCP configuration -->
+	<bean id="dataSource" class="com.zaxxer.hikari.HikariDataSource" destroy-method="close">
+		<constructor-arg ref="hikariConfig"/>
+	</bean>
+	
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource"></property>
+	</bean>
+	
+
+	
+	<mybatis-spring:scan base-package="org.zerock.mapper"/>
+
+
+[src/main/resources]
+- paste 'log4jdbc.log4j2.properties' file. 
+content : log4jdbc.spylogdelegator.name=net.sf.log4jdbc.log.slf4j.Slf4jSpyLogDelegator
+
+
+[src/test/java/org.zerock.persistence]
+- add DataSourceTests.java, JDBCTests.java
+
+- DataSourceTests.java
+package org.zerock.persistence;
+
+import static org.junit.Assert.fail;
+
+import java.sql.Connection;
+
+import javax.sql.DataSource;
+
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+
+import lombok.Setter;
+import lombok.extern.log4j.Log4j;
+
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration("file:src/main/webapp/WEB-INF/spring/root-context.xml")
+@Log4j
+
+public class DataSourceTests {
+	
+	@Setter(onMethod_ = { @Autowired })
+		private DataSource dataSource;
+	
+	@Setter(onMethod_ = { @Autowired })
+		private SqlSessionFactory sqlSessionFactory;
+	
+	@Test
+	public void testMyBatis() {
+		try (
+				SqlSession session = sqlSessionFactory.openSession();
+				Connection con = session.getConnection();
+			) {
+			log.info(session);
+			log.info(con);
+		}catch(Exception e) {
+			fail(e.getMessage());
+		}
+	}
+}
+
+
+-JDBCTests.java
+package org.zerock.persistence;
+
+import static org.junit.Assert.fail;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+
+import org.junit.Test;
+
+import lombok.extern.log4j.Log4j;
+
+@Log4j
+
+public class JDBCTests {
+	
+	static {
+		try {
+			Class.forName("oracle.jdbc.driver.OracleDriver");
+		}catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	@Test
+	public void testConnection() {
+		try(Connection con =
+				DriverManager.getConnection(
+						"jdbc:oracle:thin:@localhost:1521:orcl",
+						"book_ex",
+						"book_ex")){
+			log.info(con);
+		}catch(Exception e) {
+			fail(e.getMessage());
+		}
+	}
+
+}
